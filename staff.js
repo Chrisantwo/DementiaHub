@@ -6,7 +6,7 @@ const CFG = {
   // All GHL calls go through /api/ghl via window.DHAPI.
   locationId:        'Idf9v4q6aqh5KhzXip6e',
   accessKey:         'admin123',
-  elevenLabsAgentId: 'YOUR_ELEVENLABS_AGENT_ID', // ← replace with your ElevenLabs Conversational AI agent ID
+  elevenLabsAgentId: 'agent_7801kkd50dzsez4tfv4qme5mn6br', // ← replace with your ElevenLabs Conversational AI agent ID
 };
 
 const STAFF_LIST = ['Dr. Sarah Chen','Nurse Michael Tan','Counselor Amy Lim','Case Worker James Ng','Social Worker Lee Min','Unassigned'];
@@ -60,7 +60,8 @@ window.addEventListener('hashchange', render);
 
 async function fetchGHL(){
   try{
-    ghlOpps = await DHAPI.getOpportunities(25);
+    ghlOpps = await DHAPI.getOpportunities(50);
+    console.log('[fetchGHL] Loaded', ghlOpps.length, 'opportunities');
   }catch(e){ ghlOpps=[]; console.warn('[fetchGHL]', e.message); }
   render();
 }
@@ -286,7 +287,14 @@ function renderShell(activeV){
     <div class="pt-3 text-white/15 text-[9px] font-black uppercase tracking-widest text-center">AI Command Center v4.0</div>
   </div>
 
-  <div class="dh-main"><div class="dh-content">${content}</div></div>
+  <div class="dh-main">
+    <div class="dh-content">${content}</div>
+    <footer style="margin-left:0;padding:18px 32px;border-top:1px solid #f1f5f9;background:#fff;display:flex;align-items:center;justify-content:center;gap:24px;">
+      <a href="https://dementiahub.wibiz.ai/home" style="color:#006D77;font-size:13px;font-weight:700;text-decoration:none;display:flex;align-items:center;gap:6px;">📚 Knowledge Base</a>
+      <span style="color:#e2e8f0;">|</span>
+      <span style="color:#94a3b8;font-size:12px;">DementiaHub AI Command Center</span>
+    </footer>
+  </div>
 
   <!-- Voice AI Widget Container (ElevenLabs goes here) -->
   <div id="voice-ai-widget" style="position:fixed;bottom:24px;right:28px;z-index:200;"></div>
@@ -318,7 +326,8 @@ function renderOverview(enriched){
   const critical = enriched.filter(o=>o.urgency==='critical').length;
   const today_ct = enriched.filter(o=>{ if(!o.createdAt)return false; return (Date.now()-new Date(o.createdAt).getTime())<86400000; }).length;
   const breached = enriched.filter(o=>o.sla==='breach').length;
-  const resolved = enriched.filter(o=>o.status==='won'||o.status==='lost').length;
+  // Use displayStatus so local overrides (staff marking resolved) are counted
+  const resolved = enriched.filter(o=>o.displayStatus==='resolved').length;
 
   // ── 🚨 Safety Banner ─────────────────────────────────────
   const safetyOps = enriched.filter(o=>o.urgency==='critical');
@@ -472,7 +481,7 @@ function renderOverview(enriched){
         </div>
         <div class="dh-card" style="background:linear-gradient(135deg,#003D44,#006D77);border:none;">
           <p class="text-white/60 text-[10px] font-black uppercase tracking-wider mb-1">Status Breakdown</p>
-          ${[['Open',enriched.filter(o=>o.status!=='won'&&o.status!=='lost').length,'#60a5fa'],['Critical',critical,'#f87171'],['Resolved',resolved,'#34d399']].map(([l,v,c])=>{
+          ${[['Open',enriched.filter(o=>o.displayStatus!=='resolved').length,'#60a5fa'],['Critical',critical,'#f87171'],['Resolved',resolved,'#34d399']].map(([l,v,c])=>{
             const pct=total?Math.round(v/total*100):0;
             return `<div class="mb-2"><div class="flex justify-between text-[10px] font-bold text-white/70 mb-1"><span>${l}</span><span>${v}</span></div>
               <div class="h-1.5 bg-white/20 rounded-full"><div style="width:${pct}%;background:${c};height:100%;border-radius:4px;"></div></div></div>`;
@@ -489,13 +498,16 @@ function renderOverview(enriched){
 function renderCases(enriched){
   const loading = ghlOpps===null;
 
-  // Apply search + filter — status-normalized
+  // Apply search + filter
+  const _24h = 24 * 3600000; // milliseconds in 24 hours
   let filtered = enriched;
-  if      (activeFilter==='new')       filtered=enriched.filter(o=>o.displayStatus==='new');
-  else if (activeFilter==='triaged')   filtered=enriched.filter(o=>o.displayStatus==='triaged');
-  else if (activeFilter==='due_soon')  filtered=enriched.filter(o=>o.dueSoon && o.displayStatus!=='resolved');
-  else if (activeFilter==='resolved')  filtered=enriched.filter(o=>o.displayStatus==='resolved');
-  else if (activeFilter==='critical')  filtered=enriched.filter(o=>o.urgency==='critical');
+  if      (activeFilter==='new')        filtered=enriched.filter(o=>(Date.now()-new Date(o.createdAt||0).getTime())<_24h);
+  else if (activeFilter==='triaged')    filtered=enriched.filter(o=>o.displayStatus==='triaged');
+  else if (activeFilter==='due_soon')   filtered=enriched.filter(o=>o.dueSoon && o.displayStatus!=='resolved');
+  else if (activeFilter==='resolved')   filtered=enriched.filter(o=>o.displayStatus==='resolved');
+  else if (activeFilter==='critical')   filtered=enriched.filter(o=>o.urgency==='critical');
+  else if (activeFilter==='untriaged')  filtered=enriched.filter(o=>o.displayStatus==='new');
+  else if (activeFilter==='needs_staff') filtered=enriched.filter(o=>o.assignedTo==='Unassigned'&&o.displayStatus!=='resolved');
   else if (activeFilter==='sla_breach') filtered=enriched.filter(o=>o.sla==='breach');
 
   if(searchQuery){
@@ -588,7 +600,7 @@ function renderCases(enriched){
     <!-- Status Filter Bar -->
     <div class="filter-bar">
       <button class="flt-btn ${activeFilter==='all'?'active':''}" onclick="setFilter('all')">All (${enriched.length})</button>
-      <button class="flt-btn ${activeFilter==='new'?'active':''}" onclick="setFilter('new')">🆕 New (${enriched.filter(o=>o.displayStatus==='new').length})</button>
+      <button class="flt-btn ${activeFilter==='new'?'active':''}" onclick="setFilter('new')">🆕 New 24h (${enriched.filter(o=>(Date.now()-new Date(o.createdAt||0).getTime())<86400000).length})</button>
       <button class="flt-btn ${activeFilter==='triaged'?'active':''}" onclick="setFilter('triaged')">📋 Triaged (${enriched.filter(o=>o.displayStatus==='triaged').length})</button>
       <button class="flt-btn ${activeFilter==='due_soon'?'active':''}" onclick="setFilter('due_soon')">⏰ Due Soon (${enriched.filter(o=>o.dueSoon&&o.displayStatus!=='resolved').length})</button>
       <button class="flt-btn ${activeFilter==='resolved'?'active':''}" onclick="setFilter('resolved')">✅ Resolved (${enriched.filter(o=>o.displayStatus==='resolved').length})</button>
