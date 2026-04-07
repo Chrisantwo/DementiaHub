@@ -9,7 +9,7 @@ const CFG = {
   elevenLabsAgentId: 'agent_7801kkd50dzsez4tfv4qme5mn6br', // ← replace with your ElevenLabs Conversational AI agent ID
 };
 
-const STAFF_LIST = ['Dr. Sarah Chen','Nurse Michael Tan','Counselor Amy Lim','Case Worker James Ng','Social Worker Lee Min','Unassigned'];
+const STAFF_LIST = ['Case Manager Wibiz','DementiaSG Admin','Helpline Staff Wibiz','Read-only Analyst Wibiz','Unassigned'];
 
 // ════════════════════════════════════════════════════════════
 // STATE
