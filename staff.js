@@ -10,6 +10,19 @@ const CFG = {
 };
 
 const STAFF_LIST = ['Case Manager Wibiz','DementiaSG Admin','Helpline Staff Wibiz','Read-only Analyst Wibiz','Unassigned'];
+const ROLES      = ['Case Manager Wibiz','DementiaSG Admin','Helpline Staff Wibiz','Read-only Analyst Wibiz'];
+
+// ── Role helpers ──────────────────────────────────────────────
+function currentRole(){ return getCurrentStaff()?.staffRole || ''; }
+function isCaseManager(){ return currentRole() === 'Case Manager Wibiz'; }
+
+// roleAccessControl: filter enriched cases for current role.
+// Case Manager sees all; others see only cases assigned to their role.
+function roleAccessControl(enrichedList){
+  if(isCaseManager()) return enrichedList;
+  const role = currentRole();
+  return enrichedList.filter(o => o.assignedTo === role || o.assignedTo === 'Unassigned');
+}
 
 // ════════════════════════════════════════════════════════════
 // STATE
@@ -31,9 +44,10 @@ let cbStatuses   = JSON.parse(localStorage.getItem('dsg_cb_statuses') || '{}'); 
 // ════════════════════════════════════════════════════════════
 function isAuth(){ return sessionStorage.getItem('dsg_auth')==='1'; }
 
-function doLogin(key, staffName, staffRole){
+function doLogin(key, staffRole){
   if(key !== CFG.accessKey) return false;
-  DHUserContext.saveStaffSession(staffName, staffRole);
+  // Use role as display name since we no longer collect a separate name
+  DHUserContext.saveStaffSession(staffRole, staffRole);
   DHUserContext.configureGHLWidget(DHUserContext.getStaffContext());
   return true;
 }
@@ -180,11 +194,10 @@ function render(){
 
 function handleLogin(e){
   e.preventDefault();
-  const key       = document.getElementById('accessKey').value;
-  const staffName = document.getElementById('staffName').value;
-  const staffRole = document.getElementById('staffRole').value;
-  if(!staffName){ document.getElementById('loginError').textContent='Please select your name.'; document.getElementById('loginError').classList.remove('hidden'); return; }
-  if(doLogin(key, staffName, staffRole)){ fetchGHL(); startAutoRefresh(30000); render(); }
+  const key      = document.getElementById('accessKey').value;
+  const staffRole= document.getElementById('staffRole').value;
+  if(!staffRole){ document.getElementById('loginError').textContent='Please select your role.'; document.getElementById('loginError').classList.remove('hidden'); return; }
+  if(doLogin(key, staffRole)){ fetchGHL(); startAutoRefresh(30000); render(); }
   else { document.getElementById('loginError').textContent='Incorrect access key.'; document.getElementById('loginError').classList.remove('hidden'); }
 }
 
@@ -192,32 +205,21 @@ function handleLogin(e){
 // LOGIN
 // ════════════════════════════════════════════════════════════
 function renderLogin(){
-  const nameOptions = STAFF_LIST.filter(n => n !== 'Unassigned').map(n =>
-    `<option value="${esc(n)}">${esc(n)}</option>`).join('');
-  const roleOptions = [
-    'Case Manager','Helpline Staff','Social Worker','Counselor','Nurse','Administrator'
-  ].map(r => `<option value="${esc(r)}">${esc(r)}</option>`).join('');
-
+  const roleOptions = ROLES.map(r => `<option value="${esc(r)}">${esc(r)}</option>`).join('');
   return `
   <div class="dh-auth-bg">
     <div class="dh-auth-card">
       <div class="text-center mb-7">
-        <img src="${CFG.logo}" class="h-12 mx-auto mb-5" alt="DementiaHub">
+        <div class="text-4xl mb-3">🏥</div>
         <h1 class="text-2xl font-black text-slate-900 mb-1">AI Command Center</h1>
-        <p class="text-slate-500 text-sm font-medium">Staff access — identify yourself to continue</p>
+        <p class="text-slate-500 text-sm font-medium">Staff access — DementiaHub</p>
       </div>
       <div id="loginError" class="hidden rounded-2xl px-4 py-3 text-sm font-semibold mb-4 bg-red-50 text-red-700 border border-red-200">Incorrect access key.</div>
       <form id="loginForm" class="space-y-4">
         <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">Your Name</label>
-          <select id="staffName" class="dh-select w-full" required>
-            <option value="">— Select your name —</option>
-            ${nameOptions}
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">Your Role</label>
-          <select id="staffRole" class="dh-select w-full">
+          <label class="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">Role</label>
+          <select id="staffRole" class="dh-select w-full" required>
+            <option value="">— Select your role —</option>
             ${roleOptions}
           </select>
         </div>
@@ -235,12 +237,20 @@ function renderLogin(){
 // SHELL
 // ════════════════════════════════════════════════════════════
 function renderShell(activeV){
+  // Handover section only visible to Case Manager
+  const canHandover = isCaseManager();
+
+  // Redirect if non-Case Manager tries to access handover directly
+  if(activeV === 'handover' && !canHandover){
+    location.hash = 'overview';
+    return renderShell('overview');
+  }
+
   const nav = [
     {section:'Monitor'},
     {view:'overview', icon:'📊', label:'Overview'},
     {view:'cases',    icon:'📂', label:'Case Management'},
-    {section:'Operations'},
-    {view:'handover', icon:'🛡️', label:'Staff Handover'},
+    ...(canHandover ? [{section:'Operations'},{view:'handover', icon:'🛡️', label:'Staff Handover'}] : []),
   ];
   const navHtml = nav.map(n => {
     if(n.section) return `<div class="dh-nav-section">${n.section}</div>`;
@@ -249,8 +259,10 @@ function renderShell(activeV){
 
   const mobIcons = nav.filter(n=>n.view).map(n=>`<a href="#${n.view}" class="text-lg ${activeV===n.view?'text-white':'text-white/50'}">${n.icon}</a>`).join('');
 
-  const enriched = (ghlOpps||[]).map(enrich);
-  const critCount = enriched.filter(o=>o.urgency==='critical').length;
+  // Apply role-based visibility: Case Manager sees all, others see their assigned cases
+  const allEnriched = (ghlOpps||[]).map(enrich);
+  const enriched    = roleAccessControl(allEnriched);
+  const critCount   = enriched.filter(o=>o.urgency==='critical').length;
 
   let content='';
   if(activeV==='overview') content=renderOverview(enriched);
@@ -396,8 +408,17 @@ function renderOverview(enriched){
       </div>
     </div>`;
 
-  // ── Pipeline Preview ──────────────────────────────────────
-  const topRows = enriched.slice(0,6).map((op,i)=>`
+  // ── Pipeline Preview — respects Quick View filter ─────────
+  const _24h = 86400000;
+  let pipelineRows = enriched;
+  if      (activeFilter==='critical')   pipelineRows=enriched.filter(o=>o.urgency==='critical');
+  else if (activeFilter==='untriaged')  pipelineRows=enriched.filter(o=>o.displayStatus==='new');
+  else if (activeFilter==='needs_staff') pipelineRows=enriched.filter(o=>o.assignedTo==='Unassigned'&&o.displayStatus!=='resolved');
+  else if (activeFilter==='sla_breach') pipelineRows=enriched.filter(o=>o.sla==='breach');
+  else if (activeFilter==='resolved')   pipelineRows=enriched.filter(o=>o.displayStatus==='resolved');
+  else if (activeFilter==='new')        pipelineRows=enriched.filter(o=>(Date.now()-new Date(o.createdAt||0).getTime())<_24h);
+
+  const topRows = pipelineRows.slice(0,6).map((op,i)=>`
     <tr>
       <td><span class="badge ${op.urgency==='critical'?'badge-critical':op.urgency==='medium'?'badge-medium':'badge-low'}">${op.urgency}</span></td>
       <td><p class="font-bold text-slate-800 text-sm">${esc(op.contact?.name||'Visitor')}</p><p class="text-[10px] text-slate-400">${esc(op.caseId)}</p></td>
@@ -446,14 +467,14 @@ function renderOverview(enriched){
     <!-- SLA Widgets -->
     ${slaHtml}
 
-    <!-- Smart Filter Bar -->
+    <!-- Smart Filter Bar — filters overview pipeline inline, no redirect -->
     <div class="filter-bar">
       <span class="text-xs font-bold text-slate-400 self-center mr-1">Quick View:</span>
-      <button class="flt-btn danger ${activeFilter==='critical'?'active':''}" onclick="setFilter('critical');location.hash='cases'">🚨 Safety Priority</button>
-      <button class="flt-btn ${activeFilter==='untriaged'?'active':''}" onclick="setFilter('untriaged');location.hash='cases'">📋 Untriaged</button>
-      <button class="flt-btn ${activeFilter==='needs_staff'?'active':''}" onclick="setFilter('needs_staff');location.hash='cases'">👤 Needs Staff</button>
-      <button class="flt-btn ${activeFilter==='sla_breach'?'active':''}" onclick="setFilter('sla_breach');location.hash='cases'">⏰ SLA Breached</button>
-      <button class="flt-btn" onclick="location.hash='cases'">📂 All Cases →</button>
+      <button class="flt-btn danger ${activeFilter==='critical'?'active':''}" onclick="setFilter('critical')">🚨 Safety Priority</button>
+      <button class="flt-btn ${activeFilter==='untriaged'?'active':''}" onclick="setFilter('untriaged')">📋 Untriaged</button>
+      <button class="flt-btn ${activeFilter==='needs_staff'?'active':''}" onclick="setFilter('needs_staff')">👤 Needs Staff</button>
+      <button class="flt-btn ${activeFilter==='sla_breach'?'active':''}" onclick="setFilter('sla_breach')">⏰ SLA Breached</button>
+      <button class="flt-btn ${activeFilter==='all'?'active':''}" onclick="setFilter('all')">🔄 Reset</button>
     </div>
 
     <!-- Pipeline + Callbacks -->
@@ -474,8 +495,8 @@ function renderOverview(enriched){
       <div class="space-y-4">
         <div class="dh-card">
           <div class="flex justify-between items-center mb-3">
-            <p class="section-title">📞 Upcoming Callbacks</p>
-            <button onclick="openCallbackForm()" class="dh-btn dh-btn-primary dh-btn-sm">+ Schedule</button>
+            <p class="section-title">📞 Callbacks (ElevenLabs)</p>
+            <span class="text-[10px] font-bold text-violet-600 bg-violet-50 px-2 py-1 rounded-lg">AI-sourced</span>
           </div>
           <div class="space-y-2">${cbList}</div>
         </div>
@@ -1226,18 +1247,32 @@ function openCaseDetail(oppId){
 
 function closeCaseDetail(){ document.getElementById('modal-root').innerHTML=''; }
 
+function updateCaseStatus(oppId, status){
+  caseStatuses[oppId] = status;
+  localStorage.setItem('dsg_case_statuses', JSON.stringify(caseStatuses));
+  console.log('[updateCaseStatus]', oppId, '→', status,
+    '| resolved total:', Object.values(caseStatuses).filter(s=>s.toLowerCase().replace(/\s+/g,'') === 'resolved').length);
+}
+
 function saveCaseAction(oppId, idx){
   const status = document.getElementById('cdStatus').value;
   const assign = document.getElementById('cdAssign').value;
   const notes  = document.getElementById('cdNotes').value.trim();
-  caseStatuses[oppId] = status;
-  assignments[oppId]  = assign;
+
+  // Update state + persist
+  updateCaseStatus(oppId, status);
+  assignments[oppId] = assign;
   if(notes) caseNotes[oppId] = notes;
-  localStorage.setItem('dsg_case_statuses', JSON.stringify(caseStatuses));
-  localStorage.setItem('dsg_assignments',   JSON.stringify(assignments));
-  localStorage.setItem('dsg_case_notes',    JSON.stringify(caseNotes));
+  localStorage.setItem('dsg_assignments', JSON.stringify(assignments));
+  localStorage.setItem('dsg_case_notes',  JSON.stringify(caseNotes));
+
   const msg = document.getElementById('cdSaveMsg');
   if(msg){ msg.classList.remove('hidden'); setTimeout(()=>msg.classList.add('hidden'),2500); }
+
+  // Re-render shell so all counters (Overview + Case Management) reflect new status
+  render();
+  // Re-open detail panel so the status dropdown shows updated value
+  setTimeout(()=>openCaseDetail(oppId), 50);
 }
 
 function markCallbackDone(oppId){
