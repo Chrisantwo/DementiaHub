@@ -249,7 +249,6 @@ function startBreathingReset(seconds) {
 }
 
 function renderDashboard(user) {
-  const convos = S.convos;
   const profileHtml = `
     <div class="dh-card flex items-center gap-5">
       <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#006D77] to-[#003D44] flex items-center justify-center text-white font-black text-2xl flex-shrink-0">
@@ -413,44 +412,12 @@ function renderDashboard(user) {
       }
     </div>`;
 
-  let convoItems = "";
-  if (S.convos === null) {
-    convoItems = `<div class="text-center py-6"><div class="spinner mx-auto mb-2"></div><p class="text-slate-400 text-xs">Loading conversations…</p></div>`;
-  } else if (!S.convos.length) {
-    convoItems = `<div class="text-center py-6"><div class="text-3xl mb-2">💬</div><p class="text-slate-400 text-sm font-semibold">No conversations yet.</p></div>`;
-  } else {
-    convoItems = S.convos
-      .slice(0, 8)
-      .map(
-        (c) => `
-      <div class="convo-item mb-2">
-        <div class="flex justify-between items-start mb-1">
-          <p class="font-bold text-slate-800 text-sm leading-tight">${esc(c.contactName || c.fullName || "Unknown Contact")}</p>
-          <span class="text-[10px] text-slate-400 font-semibold ml-2 whitespace-nowrap">${timeAgo(c.lastMessageDate || c.dateUpdated)}</span>
-        </div>
-        <p class="text-xs text-slate-500 leading-relaxed line-clamp-1">${esc(c.lastMessageBody || c.snippet || "No preview available")}</p>
-        <div class="flex gap-1.5 mt-2">
-          ${c.unreadCount ? `<span class="dh-badge dh-badge-needs">${c.unreadCount} unread</span>` : ""}
-          <span class="dh-badge" style="background:#f1f5f9;color:#64748b;">${esc(c.type || "SMS")}</span>
-        </div>
-      </div>`,
-      )
-      .join("");
-  }
-
-  const conversationsHtml = `
-    <div class="dh-card">
-      <h3 class="font-black text-slate-800 mb-4">💬 Conversation History</h3>
-      <div class="max-h-80 overflow-y-auto pr-1">${convoItems}</div>
-    </div>`;
-
   return `
     <div class="dh-dashboard-view">
       <div class="mb-6">${profileHtml}</div>
       <div class="mb-5">${burnoutHtml}</div>
       <div class="mb-5">${helpNowHtml}</div>
       <div class="mb-5">${journalHtml}</div>
-      <div class="mb-5">${conversationsHtml}</div>
     </div>`;
 }
 
