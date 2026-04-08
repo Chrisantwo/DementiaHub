@@ -1,0 +1,30 @@
+/* Dashboard tab specific styles */
+
+.dh-dashboard-view .convo-item {
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid #f1f5f9;
+  background: #fafcff;
+  cursor: pointer;
+  transition: border 0.2s;
+}
+
+.dh-dashboard-view .convo-item:hover {
+  border-color: #006d77;
+}
+
+.dh-dashboard-view .kb-chip {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  background: #f0fdf4;
+  color: #065f46;
+  margin-bottom: 8px;
+}
+
+.dh-dashboard-view .kb-chip.viewed {
+  background: #e0f2fe;
+  color: #0369a1;
+}
