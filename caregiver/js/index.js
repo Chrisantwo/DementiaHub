@@ -5,7 +5,7 @@ const CFG = {
   // API key is NOT here — it lives in Vercel env vars (GHL_API_KEY).
   // All GHL calls go through /api/ghl via window.DHAPI.
   locationId: "Idf9v4q6aqh5KhzXip6e",
-  elevenLabsAgentId: "YOUR_ELEVENLABS_AGENT_ID", // ← replace with your ElevenLabs Conversational AI agent ID
+  elevenLabsAgentId: "agent_7801kkd50dzsez4tfv4qme5mn6br", // ← replace with your ElevenLabs Conversational AI agent ID
   logo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%23006D77' width='100' height='100'/%3E%3Ctext x='50' y='65' font-size='80' font-weight='bold' fill='white' text-anchor='middle'%3EDH%3C/text%3E%3C/svg%3E",
 };
 
