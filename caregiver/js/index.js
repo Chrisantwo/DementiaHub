@@ -277,14 +277,25 @@ function mountAISupportWidgetInline() {
     return;
   }
 
-  setTimeout(() => {
+  let tries = 0;
+  const maxTries = 30; // ~9 seconds at 300ms interval.
+  const timer = setInterval(() => {
+    tries += 1;
     if (customElements.get("elevenlabs-convai")) {
+      clearInterval(timer);
       mountWidget();
       return;
     }
-    slot.innerHTML =
-      '<p class="text-sm text-slate-500">Still loading voice widget... please wait a moment and refresh if needed.</p>';
-  }, 900);
+
+    if (tries >= maxTries) {
+      clearInterval(timer);
+      slot.innerHTML =
+        '<p class="text-sm text-slate-500">Voice widget is taking longer than expected.</p><button id="dh-ai-retry" class="mt-2 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">Retry loading</button>';
+      document
+        .getElementById("dh-ai-retry")
+        ?.addEventListener("click", mountAISupportWidgetInline, { once: true });
+    }
+  }, 300);
 }
 
 function render() {
