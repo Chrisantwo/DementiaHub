@@ -104,6 +104,53 @@
   color: #64748b;
 }
 
+.dh-dashboard-view .dh-trend-legend {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dh-dashboard-view .dh-trend-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+
+.dh-dashboard-view .dh-trend-legend-item .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.dh-dashboard-view .dh-trend-legend-item .dot.mood-overwhelmed {
+  background: #f43f5e;
+}
+
+.dh-dashboard-view .dh-trend-legend-item .dot.mood-tired {
+  background: #8b5cf6;
+}
+
+.dh-dashboard-view .dh-trend-legend-item .dot.mood-okay {
+  background: #94a3b8;
+}
+
+.dh-dashboard-view .dh-trend-legend-item .dot.mood-hopeful {
+  background: #006d77;
+}
+
+.dh-dashboard-view .dh-trend-legend-item .dot.mood-good {
+  background: #16a34a;
+}
+
 .dh-dashboard-view .dh-help-card {
   background: linear-gradient(160deg, #ffffff 0%, #f8fafc 100%);
 }

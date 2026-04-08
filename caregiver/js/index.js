@@ -233,25 +233,58 @@ function timeAgo(iso) {
 // ══════════════════════════════════════════════════════════════
 // RENDER ENTRY
 // ══════════════════════════════════════════════════════════════
-// Mount the ElevenLabs voice widget once — persists across navigations so
-// the web component is never destroyed/recreated (which caused auto-opening).
-function mountVoiceWidget() {
-  if (document.getElementById("dh-voice-widget-root")) return; // already mounted
+// Mount the ElevenLabs widget only when the AI Support tab is active.
+function mountAISupportWidgetInline() {
+  // Cleanup any legacy fixed-position widget from previous versions.
+  const legacy = document.getElementById("dh-voice-widget-root");
+  if (legacy) legacy.remove();
+
+  const slot = document.getElementById("dh-ai-support-widget-slot");
+  if (!slot) return;
+
   const ctx = DHUserContext.getCaregiverContext();
-  if (!ctx) return;
+  if (!ctx) {
+    slot.innerHTML =
+      '<p class="text-sm text-slate-500">Sign in again to start AI voice support.</p>';
+    return;
+  }
+
+  const agentId = String(CFG.elevenLabsAgentId || "").trim();
+  if (!agentId || agentId === "YOUR_ELEVENLABS_AGENT_ID") {
+    slot.innerHTML = `
+      <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <p class="text-sm font-bold text-amber-900">AI Support is not configured yet.</p>
+        <p class="text-xs text-amber-800 mt-1">Set <span class="font-mono">CFG.elevenLabsAgentId</span> in <span class="font-mono">caregiver/js/index.js</span> to your real ElevenLabs agent id.</p>
+      </div>`;
+    return;
+  }
+
+  slot.innerHTML =
+    '<p class="text-sm text-slate-500">Loading AI voice support...</p>';
+
   const elVars = JSON.stringify(DHUserContext.buildElevenLabsVars(ctx));
-  const root = document.createElement("div");
-  root.id = "dh-voice-widget-root";
-  // Positioned at the bottom of the left sidebar (265px wide, 18px side padding)
-  root.style.cssText =
-    "position:fixed;bottom:20px;left:18px;width:229px;z-index:200;";
-  root.innerHTML = `<elevenlabs-convai
-    id="dh-el-widget-caregiver"
-    agent-id="${esc(CFG.elevenLabsAgentId)}"
-    dynamic-variables='${elVars}'
-    style="display:block;width:100%;">
-  </elevenlabs-convai>`;
-  document.body.appendChild(root);
+  const mountWidget = () => {
+    slot.innerHTML = `<elevenlabs-convai
+      id="dh-el-widget-caregiver"
+      agent-id="${esc(agentId)}"
+      dynamic-variables='${elVars}'
+      style="display:block;width:100%;">
+    </elevenlabs-convai>`;
+  };
+
+  if (customElements.get("elevenlabs-convai")) {
+    mountWidget();
+    return;
+  }
+
+  setTimeout(() => {
+    if (customElements.get("elevenlabs-convai")) {
+      mountWidget();
+      return;
+    }
+    slot.innerHTML =
+      '<p class="text-sm text-slate-500">Still loading voice widget... please wait a moment and refresh if needed.</p>';
+  }, 900);
 }
 
 function render() {
@@ -274,7 +307,7 @@ function render() {
     return;
   }
   app.innerHTML = renderShell(user, getView());
-  mountVoiceWidget();
+  mountAISupportWidgetInline();
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -369,6 +402,7 @@ function renderShell(user, activeV) {
   const nav = [
     { view: "dashboard", icon: "🏠", label: "Dashboard" },
     { view: "resources", icon: "📚", label: "Resources" },
+    { view: "ai-support", icon: "🤖", label: "DementiaHub AI Support" },
   ];
   const navLinks = nav
     .map(
@@ -385,6 +419,7 @@ function renderShell(user, activeV) {
   let content = "";
   if (activeV === "dashboard") content = renderDashboard(user);
   else if (activeV === "resources") content = renderResources();
+  else if (activeV === "ai-support") content = renderAISupport(user);
   return `
     <div class="dh-mob-bar">
       <img src="${CFG.logo}" class="h-8 brightness-0 invert" alt="Logo">

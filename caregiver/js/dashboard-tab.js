@@ -116,12 +116,25 @@ function getBurnoutInsight(entries) {
 }
 
 function getBurnoutTrend(entries) {
-  const recent = entries.slice(-7);
-  return recent.map((e) => {
+  if (!entries.length) return [];
+
+  const toDateKey = (dateInput) => {
+    const d = new Date(dateInput);
+    if (Number.isNaN(d.getTime())) return null;
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+
+  const byDate = new Map();
+  entries.forEach((e) => {
+    const key = toDateKey(e.date);
+    if (!key) return;
+
     const moodRisk = DH_MOOD_RISK[e.mood] ?? 2;
     const stress = Number.isFinite(e.stressLevel) ? e.stressLevel : 3;
     const stressRisk = Math.max(0, Math.min(4, stress - 1));
-
     const sleepRisk = Number.isFinite(e.sleepHours)
       ? e.sleepHours < 5
         ? 3
@@ -131,21 +144,66 @@ function getBurnoutTrend(entries) {
             ? 1
             : 0
       : 1;
-
     const energy = Number.isFinite(e.energyLevel) ? e.energyLevel : 3;
     const energyRisk = Math.max(0, Math.min(4, 5 - energy));
-
     const riskScore = moodRisk + stressRisk + sleepRisk + energyRisk;
-    const pct = Math.max(12, Math.min(100, Math.round((riskScore / 15) * 100)));
-    const day = new Date(e.date).toLocaleDateString("en-SG", { weekday: "short" });
 
-    return {
-      day,
-      pct,
-      mood: e.mood || "okay",
-      riskScore,
+    const bucket = byDate.get(key) || {
+      totalRisk: 0,
+      count: 0,
+      moodCounts: {},
     };
+    bucket.totalRisk += riskScore;
+    bucket.count += 1;
+
+    const moodKey = e.mood || "okay";
+    bucket.moodCounts[moodKey] = (bucket.moodCounts[moodKey] || 0) + 1;
+    byDate.set(key, bucket);
   });
+
+  const today = new Date();
+  const trend = [];
+  for (let i = 6; i >= 0; i -= 1) {
+    const d = new Date(today);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(today.getDate() - i);
+    const key = toDateKey(d);
+    const bucket = byDate.get(key);
+
+    if (!bucket) {
+      trend.push({
+        day: d.toLocaleDateString("en-SG", {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+        }),
+        pct: 0,
+        mood: "okay",
+        riskScore: null,
+        hasData: false,
+      });
+      continue;
+    }
+
+    const avgRisk = bucket.totalRisk / bucket.count;
+    const dominantMood =
+      Object.entries(bucket.moodCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ||
+      "okay";
+
+    trend.push({
+      day: d.toLocaleDateString("en-SG", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+      }),
+      pct: Math.max(12, Math.min(100, Math.round((avgRisk / 15) * 100))),
+      mood: dominantMood,
+      riskScore: Number(avgRisk.toFixed(1)),
+      hasData: true,
+    });
+  }
+
+  return trend;
 }
 
 function getJournalDraft() {
@@ -212,12 +270,21 @@ function renderDashboard(user) {
   const insight = getBurnoutInsight(journalEntries);
   const riskScore = insight.score.toFixed(1);
   const trend = getBurnoutTrend(journalEntries);
+  const trendLegendHtml = `<div class="dh-trend-legend" aria-label="Trend legend">
+        <span class="dh-trend-legend-item"><i class="dot mood-good"></i>Good</span>
+        <span class="dh-trend-legend-item"><i class="dot mood-hopeful"></i>Hopeful</span>
+        <span class="dh-trend-legend-item"><i class="dot mood-okay"></i>Okay</span>
+        <span class="dh-trend-legend-item"><i class="dot mood-tired"></i>Tired</span>
+        <span class="dh-trend-legend-item"><i class="dot mood-overwhelmed"></i>Overwhelmed</span>
+      </div>`;
   const trendHtml = trend.length
     ? `<div class="dh-trend-strip" aria-label="7-day burnout trend">
         ${trend
           .map(
-            (t) => `<div class="dh-trend-item" title="${t.day}: risk ${t.riskScore}">
-            <div class="dh-trend-bar-wrap"><span class="dh-trend-bar mood-${esc(t.mood)}" style="height:${t.pct}%"></span></div>
+            (
+              t,
+            ) => `<div class="dh-trend-item" title="${t.hasData ? `${t.day}: average risk ${t.riskScore}` : `${t.day}: no check-in`}">
+            <div class="dh-trend-bar-wrap"><span class="dh-trend-bar mood-${esc(t.mood)}" style="height:${t.pct}%;opacity:${t.hasData ? 1 : 0.2}"></span></div>
             <span class="dh-trend-day">${esc(t.day)}</span>
           </div>`,
           )
@@ -234,6 +301,7 @@ function renderDashboard(user) {
           <p class="text-sm text-slate-600 mt-1">${insight.summary}</p>
           ${Number.isFinite(insight.avgSleep) ? `<p class="text-xs text-slate-500 mt-2">Average sleep: ${insight.avgSleep.toFixed(1)}h</p>` : `<p class="text-xs text-slate-500 mt-2">Add sleep hours to improve burnout tracking accuracy.</p>`}
           ${trendHtml}
+          ${trend.length ? trendLegendHtml : ""}
         </div>
         <span class="dh-badge ${insight.cls === "high" ? "dh-badge-needs" : insight.cls === "medium" ? "dh-badge-due" : "dh-badge-track"}">${insight.status}</span>
       </div>
@@ -386,6 +454,27 @@ function renderDashboard(user) {
     </div>`;
 }
 
+function renderAISupport(user) {
+  const patientName = user.patientName || "your loved one";
+  return `
+    <div class="dh-dashboard-view">
+      <div class="dh-card mb-5">
+        <p class="text-[11px] font-black uppercase tracking-widest text-slate-500">DementiaHub AI Support</p>
+        <h2 class="font-black text-slate-900 text-2xl mt-1">Talk to your AI Care Companion</h2>
+        <p class="text-sm text-slate-600 mt-2">Use voice support for caregiver guidance, stress check-ins, and next-step coaching for ${esc(patientName)}.</p>
+      </div>
+
+      <div class="dh-card">
+        <div class="flex items-center justify-between gap-3 mb-3">
+          <p class="font-bold text-slate-800">Voice Session</p>
+          <span class="dh-badge dh-badge-track">Private</span>
+        </div>
+        <div id="dh-ai-support-widget-slot" class="min-h-[320px]"></div>
+        <p class="text-xs text-slate-400 mt-3">If the widget does not load, confirm CFG.elevenLabsAgentId is set in caregiver/js/index.js.</p>
+      </div>
+    </div>`;
+}
+
 function setJournalMood(mood) {
   S.journalMood = mood;
   const draft = getJournalDraft();
@@ -435,6 +524,7 @@ function saveJournalEntry(userId) {
 }
 
 window.renderDashboard = renderDashboard;
+window.renderAISupport = renderAISupport;
 window.setJournalMood = setJournalMood;
 window.saveJournalEntry = saveJournalEntry;
 window.startBreathingReset = startBreathingReset;
