@@ -414,6 +414,7 @@ function renderShell(user, activeV) {
     { view: "dashboard", icon: "🏠", label: "Dashboard" },
     { view: "resources", icon: "📚", label: "Resources" },
     { view: "ai-support", icon: "🤖", label: "DementiaHub AI Support" },
+    { view: "profile", icon: "👤", label: "Profile Management" },
   ];
   const navLinks = nav
     .map(
@@ -431,6 +432,7 @@ function renderShell(user, activeV) {
   if (activeV === "dashboard") content = renderDashboard(user);
   else if (activeV === "resources") content = renderResources();
   else if (activeV === "ai-support") content = renderAISupport(user);
+  else if (activeV === "profile") content = renderProfileManagement(user);
   return `
     <div class="dh-mob-bar">
       <img src="${CFG.logo}" class="h-8 brightness-0 invert" alt="Logo">
