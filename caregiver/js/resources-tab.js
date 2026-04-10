@@ -365,28 +365,20 @@ function renderResources() {
     },
   };
 
-  html += `<div class="mb-4">
-    <p class="text-slate-600 text-xs font-medium mb-2">Select what you need:</p>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
-      <button class="p-2.5 rounded-lg border-2 transition-all text-left ${resourceTab === "emergency" ? "border-teal-600 bg-slate-50 shadow-md" : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"}" onclick="setResourceTab('emergency')">
-        <div class="text-xl mb-1">🆘</div>
-        <h3 class="font-black text-slate-900 text-xs mb-0.5">Quick Help</h3>
-        <p class="text-slate-600 text-[11px] font-medium">Emergency & urgent</p>
+  html += `<div class="mb-6">
+    <p class="text-slate-700 text-sm font-bold mb-4">📌 What do you need help with?</p>
+    <div class="flex flex-wrap gap-3">
+      <button class="px-5 py-4 rounded-2xl font-bold text-sm transition-all duration-200 flex items-center gap-3 whitespace-nowrap min-w-max ${resourceTab === "emergency" ? "bg-red-100 text-red-700 border-2 border-red-400 shadow-lg" : "bg-white text-slate-700 border-2 border-slate-200 hover:border-red-300 hover:bg-red-50"}" onclick="setResourceTab('emergency')">
+        <span class="text-2xl">🆘</span><span>Quick Help</span>
       </button>
-      <button class="p-2.5 rounded-lg border-2 transition-all text-left ${resourceTab === "cara" ? "border-teal-600 bg-slate-50 shadow-md" : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"}" onclick="setResourceTab('cara')">
-        <div class="text-xl mb-1">📱</div>
-        <h3 class="font-black text-slate-900 text-xs mb-0.5">CARA</h3>
-        <p class="text-slate-600 text-[11px] font-medium">Community app</p>
+      <button class="px-5 py-4 rounded-2xl font-bold text-sm transition-all duration-200 flex items-center gap-3 whitespace-nowrap min-w-max ${resourceTab === "cara" ? "bg-blue-100 text-blue-700 border-2 border-blue-400 shadow-lg" : "bg-white text-slate-700 border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50"}" onclick="setResourceTab('cara')">
+        <span class="text-2xl">📱</span><span>CARA App</span>
       </button>
-      <button class="p-2.5 rounded-lg border-2 transition-all text-left ${resourceTab === "dementiahub" ? "border-teal-600 bg-slate-50 shadow-md" : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"}" onclick="setResourceTab('dementiahub')">
-        <div class="text-xl mb-1">📚</div>
-        <h3 class="font-black text-slate-900 text-xs mb-0.5">DementiaHub</h3>
-        <p class="text-slate-600 text-[11px] font-medium">Guides & advice</p>
+      <button class="px-5 py-4 rounded-2xl font-bold text-sm transition-all duration-200 flex items-center gap-3 whitespace-nowrap min-w-max ${resourceTab === "dementiahub" ? "bg-orange-100 text-orange-700 border-2 border-orange-400 shadow-lg" : "bg-white text-slate-700 border-2 border-slate-200 hover:border-orange-300 hover:bg-orange-50"}" onclick="setResourceTab('dementiahub')">
+        <span class="text-2xl">📚</span><span>Learn & Guides</span>
       </button>
-      <button class="p-2.5 rounded-lg border-2 transition-all text-left ${resourceTab === "dementiasgt" ? "border-teal-600 bg-slate-50 shadow-md" : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"}" onclick="setResourceTab('dementiasgt')">
-        <div class="text-xl mb-1">🏥</div>
-        <h3 class="font-black text-slate-900 text-xs mb-0.5">Services</h3>
-        <p class="text-slate-600 text-[11px] font-medium">Care programs</p>
+      <button class="px-5 py-4 rounded-2xl font-bold text-sm transition-all duration-200 flex items-center gap-3 whitespace-nowrap min-w-max ${resourceTab === "dementiasgt" ? "bg-emerald-100 text-emerald-700 border-2 border-emerald-400 shadow-lg" : "bg-white text-slate-700 border-2 border-slate-200 hover:border-emerald-300 hover:bg-emerald-50"}" onclick="setResourceTab('dementiasgt')">
+        <span class="text-2xl">🏥</span><span>Services</span>
       </button>
     </div>
   </div>`;
