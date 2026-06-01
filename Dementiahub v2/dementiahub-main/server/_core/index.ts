@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import helmet from "helmet";
 import mongoose from "mongoose";
 import { createServer } from "http";
 import net from "net";
@@ -50,6 +51,7 @@ async function connectMongo() {
 
 async function startServer() {
   const app = express();
+  app.use(helmet());
   app.disable("x-powered-by");
   const server = createServer(app);
   // Configure body parser with larger size limit for file uploads
