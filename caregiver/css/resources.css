@@ -1,0 +1,9 @@
+/* Resources tab specific styles */
+
+.dh-resources-view .dh-card {
+  border-radius: 18px;
+}
+
+.dh-resources-view .grid button {
+  transition: all 0.2s;
+}
