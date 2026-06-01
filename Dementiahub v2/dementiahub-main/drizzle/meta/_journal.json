@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1775033943833,
+      "tag": "0000_secret_scarlet_witch",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1775034072009,
+      "tag": "0001_mixed_jean_grey",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1775900000000,
+      "tag": "0002_ai_chat_identity_bridge",
+      "breakpoints": true
+    }
+  ]
+}

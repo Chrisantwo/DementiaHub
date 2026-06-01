@@ -1,0 +1,9 @@
+module.exports = {
+  onlyBuiltDependencies: ["@tailwindcss/oxide", "esbuild"],
+  patchedDependencies: {
+    "wouter@3.7.1": "patches/wouter@3.7.1.patch",
+  },
+  overrides: {
+    "tailwindcss>nanoid": "3.3.7",
+  },
+};
